@@ -1,5 +1,7 @@
 # Unity Editor Discord Rich Presence
 
+# Add via [VPM!](https://uhkayla.github.io/VPMRepo/)
+
 Discord's Rich Presence for Unity Editor (editor only!)
 
 Refactored and cleaned up a bit. I am still new to C# but I have the basics down. 

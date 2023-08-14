@@ -1,0 +1,16 @@
+{
+  "name": "com.angelware.uerp",
+  "displayName": "Unity Editor Rich Presence",
+  "version": "1.0.0",
+  "description": "Unity Editor Rich Presence\nFork of https://github.com/ckyre/discord-presence-unity-editor",
+  "gitDependencies": {},
+  "vpmDependencies": {},
+  "author": {
+    "name": "uhKayla",
+    "email": "hey@kayla.lol",
+    "url": "angelware.net"
+  },
+  "legacyFolders": {},
+  "legacyFiles": {},
+  "localPath": "P:\\999\\Packages\\com.angelware.uerp"
+}

@@ -7,24 +7,24 @@ using System.Threading.Tasks;
 using Discord;
 using Debug = UnityEngine.Debug;
 using System.Diagnostics;
-
-// With help of MarshMello0's code : https://github.com/MarshMello0/Editor-Rich-Presence
+using UnityEngine.SceneManagement;
 
 [InitializeOnLoad]
 public static class UERP
 {
-    private const string applicationId = "846826015904497714";
-    private static Discord.Discord discord;
+    private const string APPLICATION_ID = "1140434957240643595";
+    private static Discord.Discord _discord;
 
-    private static long startTimestamp;
-    private static bool playMode = false;
+    private static long _startTimestamp;
+    private static bool _playMode = false;
 
     #region Initialization
     static UERP()
     {
         DelayStart();
     }
-    public static async void DelayStart(int delay = 1000)
+
+    private static async void DelayStart(int delay = 1000)
     {
         await Task.Delay(delay);
         if (DiscordRunning())
@@ -33,59 +33,87 @@ public static class UERP
         }
     }
 
-    public static void Init()
+    private static void Init()
     {
-        // Start Discord plugin
         try
         {
-            discord = new Discord.Discord(long.Parse(applicationId), (long)CreateFlags.Default);
+            Debug.Log("Started Rich Presence");
+            _discord = new Discord.Discord(long.Parse(APPLICATION_ID), (long)CreateFlags.Default);
         }
         catch (Exception e)
         {
             Debug.LogError(e.ToString());
             return;
         }
-
-        // Get start timestamp
-        TimeSpan timeSpan = TimeSpan.FromMilliseconds(EditorAnalyticsSessionInfo.elapsedTime);
-        startTimestamp = DateTimeOffset.Now.Add(timeSpan).ToUnixTimeSeconds();
-
-        // Update activity
-        EditorApplication.update += Update;
+        
+        var timeSpan = TimeSpan.FromMilliseconds(EditorAnalyticsSessionInfo.elapsedTime);
+        _startTimestamp = DateTimeOffset.Now.Add(timeSpan).ToUnixTimeSeconds();
+        
         EditorApplication.playModeStateChanged += PlayModeChanged;
+    
         UpdateActivity();
+        
+        if (DiscordRunning())
+        {
+            _ = UpdateLoop();
+        }
     }
     #endregion
 
     #region Update
+
     private static void Update()
     {
-        if(discord != null) discord.RunCallbacks();
+        //moved out of the update loop and into a slower async loop
+    }
+    
+    private static async Task UpdateLoop()
+    {
+        while (true)
+        {
+            if (_discord != null && DiscordRunning())
+            {
+                _discord.RunCallbacks();
+            }
+        
+            await Task.Delay(5000); // Delay for 5 seconds before running callbacks again
+        }
     }
 
     private static void PlayModeChanged (PlayModeStateChange state)
     {
-        if (EditorApplication.isPlaying != playMode)
-        {
-            playMode = EditorApplication.isPlaying;
+        if (EditorApplication.isPlaying == _playMode) return;
+        _playMode = EditorApplication.isPlaying;
 
-            UpdateActivity();
-        }
+        UpdateActivity();
     }
 
-    public static void UpdateActivity()
+    private static void UpdateActivity()
     {
-        if (discord == null)
+        if (_discord == null)
         {
             Init();
             return;
         }
+        
+        var sceneName = SceneManager.GetActiveScene().name;
+        string stateMessage;
 
-        Activity activity = new Activity
+        if (string.IsNullOrEmpty(SceneManager.GetActiveScene().path))
         {
-            State = EditorSceneManager.GetActiveScene().name + " scene",
+            stateMessage = "Editing an Unsaved Scene";
+        }
+        else
+        {
+            stateMessage = "Editing" + sceneName;
+        }
+
+        var activity = new Activity
+        {
+            
+            State = stateMessage,
             Details = Application.productName,
-            Timestamps = { Start = startTimestamp },
+            Timestamps = { Start = _startTimestamp },
             Assets =
                 {
                     LargeImage = "unity-icon",
@@ -95,7 +123,7 @@ public static class UERP
                 },
         };
 
-        discord.GetActivityManager().UpdateActivity(activity, result =>
+        _discord.GetActivityManager().UpdateActivity(activity, result =>
         {
             if (result != Result.Ok) Debug.LogError(result.ToString());
         });
@@ -105,7 +133,7 @@ public static class UERP
 
     private static bool DiscordRunning()
     {
-        Process[] processes = Process.GetProcessesByName("Discord");
+        var processes = Process.GetProcessesByName("Discord");
 
         if (processes.Length == 0)
         {
